@@ -257,8 +257,8 @@ local function send_to_pane(direction)
   f:write(text)
   f:close()
 
-  local load_cmd = string.format("tmux load-buffer '%s'", tmpfile)
-  local paste_cmd = string.format("tmux paste-buffer -t '%s'", pane_id)
+  local load_cmd = "tmux load-buffer " .. vim.fn.shellescape(tmpfile)
+  local paste_cmd = "tmux paste-buffer -t " .. vim.fn.shellescape(pane_id)
 
   local result = os.execute(load_cmd .. " && " .. paste_cmd)
   os.remove(tmpfile)
@@ -273,7 +273,7 @@ local function send_to_pane(direction)
 
   -- Focus target pane if configured
   if M.config.focus_after_send then
-    os.execute(string.format("tmux select-pane -t '%s'", pane_id))
+    os.execute("tmux select-pane -t " .. vim.fn.shellescape(pane_id))
   end
 
   vim.notify(string.format("Sent to %s pane", direction), vim.log.levels.INFO)
