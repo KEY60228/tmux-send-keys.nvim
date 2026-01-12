@@ -156,8 +156,10 @@ local function find_pane_in_direction(direction)
   -- Get current pane info
   local current_handle = io.popen("tmux display-message -p '#{pane_id} #{pane_top} #{pane_bottom} #{pane_left} #{pane_right}' 2>/dev/null")
   if not current_handle then return nil end
-  local current_info = current_handle:read("*a"):gsub("%s+$", "")
+  local current_info = current_handle:read("*a")
   current_handle:close()
+  if not current_info then return nil end
+  current_info = current_info:gsub("%s+$", "")
 
   local cur_id, cur_top, cur_bottom, cur_left, cur_right = current_info:match("(%S+) (%d+) (%d+) (%d+) (%d+)")
   if not cur_id then return nil end
@@ -168,6 +170,7 @@ local function find_pane_in_direction(direction)
   if not panes_handle then return nil end
   local panes_output = panes_handle:read("*a")
   panes_handle:close()
+  if not panes_output then return nil end
 
   local best_pane = nil
   local best_distance = math.huge
