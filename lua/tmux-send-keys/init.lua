@@ -245,7 +245,7 @@ local function send_to_pane(direction)
   end
 
   -- Use temp file for reliable text transfer
-  local tmpfile = os.tmpname()
+  local tmpfile = vim.fn.tempname()
   local f = io.open(tmpfile, "w")
   if not f then
     vim.notify("Failed to create temp file", vim.log.levels.ERROR)
