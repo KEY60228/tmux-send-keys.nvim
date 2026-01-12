@@ -254,16 +254,23 @@ local function send_to_pane(direction)
     vim.notify("Failed to create temp file", vim.log.levels.ERROR)
     return
   end
-  f:write(text)
+
+  local write_ok, write_err = f:write(text)
   f:close()
+
+  if not write_ok then
+    os.remove(tmpfile)
+    vim.notify("Failed to write temp file: " .. tostring(write_err), vim.log.levels.ERROR)
+    return
+  end
 
   local load_cmd = "tmux load-buffer " .. vim.fn.shellescape(tmpfile)
   local paste_cmd = "tmux paste-buffer -t " .. vim.fn.shellescape(pane_id)
 
-  local result = os.execute(load_cmd .. " && " .. paste_cmd)
-  os.remove(tmpfile)
+  local ok, result = pcall(os.execute, load_cmd .. " && " .. paste_cmd)
+  os.remove(tmpfile)  -- Always clean up temp file
 
-  if result ~= 0 then
+  if not ok or result ~= 0 then
     vim.notify("Failed to send text to tmux pane", vim.log.levels.ERROR)
     return
   end
