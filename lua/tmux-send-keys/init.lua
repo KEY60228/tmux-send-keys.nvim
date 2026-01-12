@@ -332,10 +332,10 @@ function M.open_prompt(opts)
 
   -- Create buffer
   state.buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(state.buf, "buftype", "nofile")
-  vim.api.nvim_buf_set_option(state.buf, "bufhidden", "wipe")
-  vim.api.nvim_buf_set_option(state.buf, "filetype", "markdown")
-  vim.api.nvim_buf_set_option(state.buf, "completefunc", "v:lua._tmux_send_keys_complete")
+  vim.bo[state.buf].buftype = "nofile"
+  vim.bo[state.buf].bufhidden = "wipe"
+  vim.bo[state.buf].filetype = "markdown"
+  vim.bo[state.buf].completefunc = "v:lua._tmux_send_keys_complete"
 
   -- Set initial content if provided
   if opts.initial_lines and #opts.initial_lines > 0 then
@@ -347,8 +347,8 @@ function M.open_prompt(opts)
   state.win = vim.api.nvim_open_win(state.buf, true, float_opts)
 
   -- Window options
-  vim.api.nvim_win_set_option(state.win, "wrap", true)
-  vim.api.nvim_win_set_option(state.win, "linebreak", true)
+  vim.wo[state.win].wrap = true
+  vim.wo[state.win].linebreak = true
 
   -- Setup keymaps
   setup_buffer_keymaps(state.buf)
