@@ -84,6 +84,9 @@ local function is_tmux()
   return vim.env.TMUX ~= nil
 end
 
+-- Visual block mode character (Ctrl-V)
+local VISUAL_BLOCK = vim.api.nvim_replace_termcodes("<C-v>", true, true, true)
+
 -- Get visually selected text
 local function get_visual_selection()
   local start_pos = vim.fn.getpos("'<")
@@ -108,7 +111,7 @@ local function get_visual_selection()
       lines[1] = string.sub(lines[1], start_col)
       lines[#lines] = string.sub(lines[#lines], 1, end_col)
     end
-  elseif mode == "\22" then
+  elseif mode == VISUAL_BLOCK then
     local new_lines = {}
     for _, line in ipairs(lines) do
       table.insert(new_lines, string.sub(line, start_col, end_col))
