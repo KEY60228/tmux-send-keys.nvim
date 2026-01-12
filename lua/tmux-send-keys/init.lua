@@ -236,7 +236,7 @@ local function send_to_pane(direction)
   local text = table.concat(lines, "\n")
 
   if text:gsub("%s+", "") == "" then
-    vim.notify("Buffer is empty", vim.log.levels.WARN)
+    vim.notify("Cannot send empty buffer", vim.log.levels.WARN)
     return
   end
 
