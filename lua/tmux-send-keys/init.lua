@@ -14,6 +14,13 @@ M.config = {
     close = "<Esc>",
     close_q = "q",
   },
+  -- Draft behavior
+  draft = {
+    -- Keep the last draft when closing so it can be resumed later
+    persist = true,
+    -- Clear the draft after a successful send
+    clear_on_send = true,
+  },
   -- Floating window options
   float = {
     width = 0.8,   -- 80% of editor width
@@ -29,7 +36,19 @@ M.config = {
 local state = {
   buf = nil,
   win = nil,
+  -- The last draft held in memory so it can be resumed
+  draft = {},
 }
+
+-- Save the current buffer content as the draft
+local function save_draft()
+  if not M.config.draft.persist then
+    return
+  end
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    state.draft = vim.api.nvim_buf_get_lines(state.buf, 0, -1, false)
+  end
+end
 
 -- Custom completion function for @path
 local function complete_at_path(findstart, base)
@@ -142,8 +161,13 @@ local function calc_float_opts()
   }
 end
 
--- Close the prompt buffer
-local function close_prompt()
+-- Close the prompt buffer. By default the draft is saved so it can be resumed
+-- later; pass { save = false } to discard it.
+local function close_prompt(opts)
+  opts = opts or {}
+  if opts.save ~= false then
+    save_draft()
+  end
   if state.win and vim.api.nvim_win_is_valid(state.win) then
     vim.api.nvim_win_close(state.win, true)
   end
@@ -278,8 +302,13 @@ local function send_to_pane(direction)
     return
   end
 
-  -- Close buffer first
-  close_prompt()
+  -- The draft was consumed by the send; clear it unless configured otherwise
+  if M.config.draft.clear_on_send then
+    state.draft = {}
+  end
+
+  -- Close buffer without re-saving the (now consumed) draft
+  close_prompt({ save = false })
 
   -- Focus target pane if configured
   if M.config.focus_after_send then
@@ -307,12 +336,12 @@ local function setup_buffer_keymaps(buf)
     vim.keymap.set("n", km.send_right, function() send_to_pane("right") end, { buffer = buf, desc = "Send to pane right" })
   end
 
-  -- Close keymaps
+  -- Close keymaps (saves the draft so it can be resumed)
   if km.close then
-    vim.keymap.set("n", km.close, close_prompt, { buffer = buf, desc = "Close prompt" })
+    vim.keymap.set("n", km.close, function() close_prompt() end, { buffer = buf, desc = "Stop prompt (save draft)" })
   end
   if km.close_q then
-    vim.keymap.set("n", km.close_q, close_prompt, { buffer = buf, desc = "Close prompt" })
+    vim.keymap.set("n", km.close_q, function() close_prompt() end, { buffer = buf, desc = "Stop prompt (save draft)" })
   end
 
   -- Tab completion for @path
@@ -350,9 +379,17 @@ function M.open_prompt(opts)
   vim.bo[state.buf].filetype = "markdown"
   vim.bo[state.buf].completefunc = "v:lua._tmux_send_keys_complete"
 
-  -- Set initial content if provided
+  -- Determine initial content: an explicit selection (opts.initial_lines) takes
+  -- priority and becomes the draft; otherwise resume the last saved draft.
+  local lines
   if opts.initial_lines and #opts.initial_lines > 0 then
-    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, opts.initial_lines)
+    lines = opts.initial_lines
+    state.draft = lines
+  else
+    lines = state.draft or {}
+  end
+  if #lines > 0 then
+    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
   end
 
   -- Create floating window
@@ -377,6 +414,14 @@ function M.open_prompt_with_selection()
 
   local lines = get_visual_selection()
   M.open_prompt({ initial_lines = lines })
+end
+
+-- Discard the saved draft (e.g. to start fresh next time the prompt opens).
+function M.clear_draft()
+  state.draft = {}
+  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, {})
+  end
 end
 
 -- Setup keymaps
